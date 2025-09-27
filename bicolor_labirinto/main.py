@@ -51,6 +51,6 @@ def genera_labirinto(larghezza_celle, altezza_celle):
 
 
 # esempio di utilizzo
-lab = genera_labirinto(25, 25)  # 6x4 celle logiche
+lab = genera_labirinto(39, 18)  # 6x4 celle logiche
 plt.pcolormesh(lab)
 plt.show()
