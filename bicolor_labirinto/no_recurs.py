@@ -78,5 +78,5 @@ sy = 39
 lab = genera_labirinto_iter(sx, sy)  # 6x4 celle logiche
 
 salva_labirinto_csv(sx, sy, lab, "labirinto.csv")
-plt.pcolormesh(lab)
-plt.show()
+# plt.pcolormesh(lab)
+# plt.show()
