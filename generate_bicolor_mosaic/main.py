@@ -60,21 +60,44 @@ def genera_labirinto_iter(larghezza_celle, altezza_celle):
     return maze
 
 
+# old version
+# def generate_mosaic(lab: np.ndarray) -> np.ndarray:
+#     mosaic = np.empty_like(lab, dtype=str)
+#     for j in range(lab.shape[1]):
+#         mosaic[0, j] = "0"
+#     for i in range(1, lab.shape[0] - 1):
+#         current_row_color = np.mod(i, 2)
+#         for j in range(lab.shape[1]):
+#             if mosaic[i - 1, j] == "1" and lab[i, j] != current_row_color:
+#                 raise ValueError((i, j))
+#             elif mosaic[i - 1, j] == "1":
+#                 mosaic[i, j] = "2"
+#             elif lab[i, j] != current_row_color:
+#                 mosaic[i, j] = "1"
+#             else:
+#                 mosaic[i, j] = "0"
+#     return mosaic
+
+
 def generate_mosaic(lab: np.ndarray) -> np.ndarray:
-    mosaic = np.empty_like(lab, dtype=str)
-    for j in range(lab.shape[1]):
-        mosaic[0, j] = "+"
-    for i in range(1, lab.shape[0] - 1):
+    mosaic = np.full(fill_value=0, shape=(lab.shape[0] + 2, lab.shape[1]))
+    for i in range(0, lab.shape[0]):
         current_row_color = np.mod(i, 2)
         for j in range(lab.shape[1]):
-            if mosaic[i - 1, j] == "F" and lab[i, j] != current_row_color:
-                raise ValueError((i, j))
-            elif mosaic[i - 1, j] == "F":
-                mosaic[i, j] = "B"
-            elif lab[i, j] != current_row_color:
-                mosaic[i, j] = "F"
-            else:
-                mosaic[i, j] = "+"
+            # if mosaic[i - 1, j] == 1 and lab[i, j] != current_row_color:
+            #     raise ValueError((i, j))
+            # elif mosaic[i - 1, j] == 1:
+            #     mosaic[i, j] = 2
+            mosaic[i, j] += lab[i, j]
+            if lab[i, j] != current_row_color:
+                mosaic[i, j] += 8
+                mosaic[i + 1, j] += 2
+                mosaic[i + 2, j] += 4
+            # else:
+            #     mosaic[i, j] = 0
+
+    # for j in range(lab.shape[1]):
+    #     mosaic[lab.shape[0] - 1, j] += lab[lab.shape[0] - 1, j]
     return mosaic
 
 
@@ -84,7 +107,7 @@ def longest_chain(mosaic) -> int:
     for i in range(1, mosaic.shape[0] - 1):
         o_count = 0
         for j in range(mosaic.shape[1]):
-            if mosaic[i, j] == "F":
+            if mosaic[i, j] == "2":
                 o_count += 1
             else:
                 o_count = 0
@@ -92,13 +115,15 @@ def longest_chain(mosaic) -> int:
     return o_count
 
 
-def salva_labirinto_csv(sx, sy, matrice, filename):
+def salva_labirinto_csv(matrice, filename):
     """
     Salva la matrice linearizzata (righe concatenate) in un CSV a singola riga.
     """
+    sizex = matrice.shape[0]
+    sizey = matrice.shape[1]
     flat = matrice.flatten()  # linearizza in un array 1D
-    flat = np.append(arr=flat, values=sx * 2 + 1)
-    flat = np.append(arr=flat, values=sy * 2 + 1)
+    flat = np.append(arr=flat, values=sizex)
+    flat = np.append(arr=flat, values=sizey)
     with open(filename, "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(flat)
@@ -108,6 +133,8 @@ if __name__ == "__main__":
     # esempio di utilizzo
     sx = 110  # instead of 130
     sy = 130  # instead of 150
+    # sx = 10  # instead of 130
+    # sy = 10  # instead of 150
     lab = genera_labirinto_iter(sx, sy)
 
     plt.figure(figsize=(6, 6))
@@ -118,7 +145,14 @@ if __name__ == "__main__":
 
     lab_mosaic = "/Users/matteotessarolo/Documents/coding/crochet_utilities/coperta.csv"
     mosaic = generate_mosaic(lab)
-    salva_labirinto_csv(sx, sy, mosaic, lab_mosaic)
+
+    plt.figure(figsize=(6, 6))
+    plt.pcolormesh(mosaic, cmap="gray_r", edgecolors="none")
+    plt.axis("equal")
+    plt.axis("off")
+    plt.show()
+
+    salva_labirinto_csv(mosaic, lab_mosaic)
     # longest_o_chain = longest_chain(mosaic)
     # print(np.sum(lab) / (lab.shape[0] * lab.shape[1]))
     # print("stop here")
