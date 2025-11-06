@@ -8,10 +8,13 @@ with open(
 ) as file:
     csvreader = csv.reader(file, delimiter=" ")
     for row in csvreader:
-        print(np.size(row[0].split("\t")))
         p_row = []
-        for i in row[0].split("\t"):
-            p_row.append(0 if i == "0" else 1)
+        for r in row:
+            for i in r.split("\t"):
+                if i == "0":
+                    p_row.append(0)
+                elif i == "1":
+                    p_row.append(1)
         pattern.append(p_row)
 
 pattern = np.array(pattern)
