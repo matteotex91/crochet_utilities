@@ -8,10 +8,10 @@ with open(
 ) as file:
     csvreader = csv.reader(file, delimiter=" ")
     for row in csvreader:
+        print(np.size(row[0].split("\t")))
         p_row = []
-        for s in row:
-            for i in s.split("\t"):
-                p_row.append(0 if i == "" else 1)
+        for i in row[0].split("\t"):
+            p_row.append(0 if i == "0" else 1)
         pattern.append(p_row)
 
 pattern = np.array(pattern)
@@ -54,7 +54,9 @@ def salva_tappeto(matrice, filename):
     """
     sizex = matrice.shape[0]
     sizey = matrice.shape[1]
-    flat = np.flip(matrice, axis=0).flatten()  # linearizza in un array 1D
+    flat = np.flip(
+        np.flip(matrice, axis=0), axis=1
+    ).flatten()  # linearizza in un array 1D
     flat = np.append(arr=flat, values=sizex)
     flat = np.append(arr=flat, values=sizey)
     with open(filename, "w", newline="") as f:
