@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 import os
 import csv
 
+# convertire : 1, 7, 11, 13, 14, 17 ,18
+
 
 def gen_pattern(pic_n: int, negative: bool, pattern_size: int):
 
