@@ -47,6 +47,6 @@ def gen_pattern(pic_n: int, negative: bool, pattern_size: int):
 
 
 if __name__ == "__main__":
-    pic_n = 18
-    negative = True
+    pic_n = 14
+    negative = False
     gen_pattern(pic_n=pic_n, negative=negative, pattern_size=121)
