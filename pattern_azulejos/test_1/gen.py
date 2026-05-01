@@ -22,7 +22,7 @@ def gen_pattern(pic_n: int, negative: bool, pattern_size: int):
         mono = (
             im.convert("L")
             .resize((pattern_size, pattern_size))
-            .point(lambda p: 1 if p > 200 else 0)
+            .point(lambda p: 1 if p > 100 else 0)
         )
         # mono.show()
         for i in range(pattern_size):
@@ -32,14 +32,19 @@ def gen_pattern(pic_n: int, negative: bool, pattern_size: int):
                 elif i % 2 == 1 and j % 2 == 1:
                     ptr[i, j] = 1
                 else:
-                    ptr[i, j] = mono.im[i + j * pattern_size]
+                    ptr[i, j] = (
+                        1 - mono.im[i + j * pattern_size]
+                        if negative
+                        else mono.im[i + j * pattern_size]
+                    )
 
         with open(out_csv_path, "w+", newline="") as file:
             writer = csv.writer(file)
             writer.writerows(ptr.astype(int))
 
         fig, ax = plt.subplots()
-        ax.pcolormesh(ptr, cmap="Blues_r" if negative else "Blues")
+        # ax.pcolormesh(ptr, cmap="Blues_r" if negative else "Blues")
+        ax.pcolormesh(ptr, cmap="Blues")
         ax.axis("equal")
 
         plt.savefig(out_path, dpi=150)
@@ -47,6 +52,6 @@ def gen_pattern(pic_n: int, negative: bool, pattern_size: int):
 
 
 if __name__ == "__main__":
-    pic_n = 14
+    pic_n = 19
     negative = False
     gen_pattern(pic_n=pic_n, negative=negative, pattern_size=121)
