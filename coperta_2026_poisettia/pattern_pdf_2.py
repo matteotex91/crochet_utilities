@@ -20,7 +20,7 @@ def create_pattern_pdf(pix_arr, pat_arr, output_path):
     body_top = page_height - margin - 54
     body_height = body_top - margin
     n_rows, n_columns = pix_arr.shape
-    palette = np.array([[190, 35, 45], [239, 222, 190]], dtype=np.uint8)
+    palette = np.array([[239, 222, 190], [190, 35, 45]], dtype=np.uint8)
     rotated_pixels = np.rot90(palette[pix_arr.astype(int)], k=-1)
     display_pixels = np.concatenate((rotated_pixels[:, -1:], rotated_pixels), axis=1)
     image = ImageReader(Image.fromarray(display_pixels))
@@ -34,8 +34,8 @@ def create_pattern_pdf(pix_arr, pat_arr, output_path):
     number_color = HexColor("#202020")
     pattern_color = HexColor("#F4CE46")
     highlight_color = HexColor("#00852B")
-    odd_row_color = HexColor("#BE232D")
-    even_row_color = HexColor("#EFDEBE")
+    odd_row_color = HexColor("#EFDEBE")
+    even_row_color = HexColor("#BE232D")
     pdf = canvas.Canvas(output_path, pagesize=(page_width, page_height))
     pdf.setTitle("Crochet Pattern")
 
