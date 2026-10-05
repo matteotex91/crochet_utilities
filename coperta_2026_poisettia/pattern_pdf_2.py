@@ -4,7 +4,7 @@ import re
 
 import numpy as np
 from PIL import Image
-from reportlab.lib.colors import HexColor, white
+from reportlab.lib.colors import HexColor, black, white
 from reportlab.lib.pagesizes import A5, landscape
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
@@ -21,7 +21,7 @@ def create_pattern_pdf(pix_arr, pat_arr, output_path):
     body_height = body_top - margin
     n_rows, n_columns = pix_arr.shape
     palette = np.array([[239, 222, 190], [190, 35, 45]], dtype=np.uint8)
-    rotated_pixels = np.rot90(palette[pix_arr.astype(int)], k=-1)
+    rotated_pixels = np.rot90(palette[np.flip(pix_arr.astype(int), axis=1)], k=-1)
     display_pixels = np.concatenate((rotated_pixels[:, -1:], rotated_pixels), axis=1)
     image = ImageReader(Image.fromarray(display_pixels))
     image_area_height = page_height - 2 * margin
@@ -129,6 +129,14 @@ def create_pattern_pdf(pix_arr, pat_arr, output_path):
                 text_x += pattern_width
 
         pdf.drawImage(image, image_x, image_y, width=image_width, height=image_height)
+        pdf.setStrokeColor(black)
+        pdf.setLineWidth(0.1)
+        for column_boundary in range(1, display_pixels.shape[1]):
+            grid_x = image_x + column_boundary * image_scale
+            pdf.line(grid_x, image_y, grid_x, image_y + image_height)
+        for row_boundary in range(1, display_pixels.shape[0]):
+            grid_y = image_y + row_boundary * image_scale
+            pdf.line(image_x, grid_y, image_x + image_width, grid_y)
         highlight_x = image_x + (row_index + 1) * image_scale
         pdf.setStrokeColor(highlight_color)
         pdf.setLineWidth(0.75)
