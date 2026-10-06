@@ -4,7 +4,7 @@ import re
 
 import numpy as np
 from PIL import Image
-from reportlab.lib.colors import HexColor, white
+from reportlab.lib.colors import HexColor, black, white
 from reportlab.lib.pagesizes import A5, landscape
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
@@ -20,22 +20,27 @@ def create_pattern_pdf(pix_arr, pat_arr, output_path):
     body_top = page_height - margin - 54
     body_height = body_top - margin
     n_rows, n_columns = pix_arr.shape
-    palette = np.array([[190, 35, 45], [239, 222, 190]], dtype=np.uint8)
+    palette = np.array([[239, 222, 190], [190, 35, 45]], dtype=np.uint8)
+    rotated_pixels = np.rot90(palette[np.flip(pix_arr.astype(int), axis=1)], k=-1)
+    display_pixels = np.concatenate((rotated_pixels[:, -1:], rotated_pixels), axis=1)
     # Pre-upscale so viewers (Apple Preview/iOS) don't interpolate pixels into blur
-    pil_image = Image.fromarray(palette[pix_arr.astype(int)])
+    pil_image = Image.fromarray(display_pixels)
     pil_image = pil_image.resize(
         (pil_image.width * 20, pil_image.height * 20), Image.NEAREST
     )
     image = ImageReader(pil_image)
-    image_scale = min(image_area_width / n_columns, body_height / n_rows)
-    image_width = n_columns * image_scale
-    image_height = n_rows * image_scale
+    image_area_height = page_height - 2 * margin
+    image_scale = min(image_area_width / (n_rows + 1), image_area_height / n_columns)
+    image_width = (n_rows + 1) * image_scale
+    image_height = n_columns * image_scale
     image_x = image_left + (image_area_width - image_width) / 2
-    image_y = margin + (body_height - image_height) / 2
+    image_y = page_height - margin - image_height
     font_name = "Courier-Bold"
     number_color = HexColor("#202020")
     pattern_color = HexColor("#F4CE46")
     highlight_color = HexColor("#00852B")
+    odd_row_color = HexColor("#EFDEBE")
+    even_row_color = HexColor("#BE232D")
     pdf = canvas.Canvas(output_path, pagesize=(page_width, page_height))
     pdf.setTitle("Crochet Pattern")
 
@@ -49,7 +54,7 @@ def create_pattern_pdf(pix_arr, pat_arr, output_path):
                 raise ValueError(f"Invalid pattern token: {token}")
             elements.append(match.groups())
 
-        font_size = 14
+        font_size = 28
         while True:
             padding = font_size * 0.35
             space_width = pdf.stringWidth(" ", font_name, font_size)
@@ -83,7 +88,21 @@ def create_pattern_pdf(pix_arr, pat_arr, output_path):
 
         pdf.setFillColor(number_color)
         pdf.setFont("Helvetica-Bold", 24)
-        pdf.drawString(margin, page_height - margin - 24, f"Row {row_index + 1}")
+        row_label = f"Row {row_index + 1}"
+        label_padding = 10
+        label_width = (
+            pdf.stringWidth(row_label, "Helvetica-Bold", 24) + 2 * label_padding
+        )
+        label_height = 40
+        label_y = page_height - margin - label_height
+        pdf.roundRect(margin, label_y, label_width, label_height, 6, stroke=0, fill=1)
+        pdf.setFillColor(white)
+        pdf.drawString(margin + label_padding, label_y + 12, row_label)
+        swatch_size = 24
+        swatch_x = margin + label_width + 10
+        swatch_y = label_y + (label_height - swatch_size) / 2
+        pdf.setFillColor(odd_row_color if (row_index + 1) % 2 else even_row_color)
+        pdf.roundRect(swatch_x, swatch_y, swatch_size, swatch_size, 4, stroke=0, fill=1)
         pdf.setFont(font_name, font_size)
         for line_index, line in enumerate(lines):
             text_x = margin
@@ -100,28 +119,37 @@ def create_pattern_pdf(pix_arr, pat_arr, output_path):
                     pdf.drawString(text_x, text_y, " ")
                     text_x += space_width
                 pdf.setFillColor(number_color)
-                pdf.rect(text_x, box_y, number_width, box_height, stroke=0, fill=1)
+                pdf.roundRect(
+                    text_x, box_y, number_width, box_height, 4, stroke=0, fill=1
+                )
                 pdf.setFillColor(white)
                 pdf.drawString(text_x + padding, text_y, number)
                 text_x += number_width
                 pdf.setFillColor(pattern_color)
-                pdf.rect(text_x, box_y, pattern_width, box_height, stroke=0, fill=1)
+                pdf.roundRect(
+                    text_x, box_y, pattern_width, box_height, 4, stroke=0, fill=1
+                )
                 pdf.setFillColor(number_color)
                 pdf.drawString(text_x + padding, text_y, pattern)
                 text_x += pattern_width
 
         pdf.drawImage(image, image_x, image_y, width=image_width, height=image_height)
-        # source_row = (n_rows - row_index) % n_rows
-        # highlight_y = image_y + (n_rows - source_row - 1) * image_scale
-        highlight_y = image_y + (row_index) * image_scale
+        pdf.setStrokeColor(black)
+        pdf.setLineWidth(0.1)
+        for column_boundary in range(1, display_pixels.shape[1]):
+            grid_x = image_x + column_boundary * image_scale
+            pdf.line(grid_x, image_y, grid_x, image_y + image_height)
+        for row_boundary in range(1, display_pixels.shape[0]):
+            grid_y = image_y + row_boundary * image_scale
+            pdf.line(image_x, grid_y, image_x + image_width, grid_y)
+        highlight_x = image_x + (row_index + 1) * image_scale
         pdf.setStrokeColor(highlight_color)
         pdf.setLineWidth(0.75)
-        # rect_mag_factor = 1.5
         pdf.rect(
-            image_x,
-            highlight_y,
-            image_width,
+            highlight_x,
+            image_y,
             image_scale,
+            image_height,
             stroke=1,
             fill=0,
         )
@@ -133,7 +161,7 @@ def create_pattern_pdf(pix_arr, pat_arr, output_path):
 if __name__ == "__main__":
     pix_arr = np.array([])
     with open(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "pattern_2.csv"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "pattern.csv"),
         newline="",
     ) as csvfile:
         reader = csv.reader(csvfile)

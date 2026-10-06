@@ -10,7 +10,16 @@ from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
 
-def create_pattern_pdf(pix_arr, pat_arr, output_path):
+def create_pattern_pdf(
+    pix_arr,
+    pat_arr,
+    folder_name,
+    even_row_color: HexColor,
+    odd_row_color: HexColor,
+    number_color: HexColor = HexColor("#202020"),
+    pattern_color: HexColor = HexColor("#F4CE46"),
+    highlight_color: HexColor = HexColor("#00852B"),
+):
     page_width, page_height = landscape(A5)
     margin = 20
     column_gap = 18
@@ -20,12 +29,29 @@ def create_pattern_pdf(pix_arr, pat_arr, output_path):
     body_top = page_height - margin - 54
     body_height = body_top - margin
     n_rows, n_columns = pix_arr.shape
-    palette = np.array([[239, 222, 190], [190, 35, 45]], dtype=np.uint8)
+
+    palette = np.array(
+        [
+            [
+                int(odd_row_color.red * 255),
+                int(odd_row_color.green * 255),
+                int(odd_row_color.blue * 255),
+            ],
+            [
+                int(even_row_color.red * 255),
+                int(even_row_color.green * 255),
+                int(even_row_color.blue * 255),
+            ],
+        ],
+        dtype=np.uint8,
+    )
     rotated_pixels = np.rot90(palette[np.flip(pix_arr.astype(int), axis=1)], k=-1)
     display_pixels = np.concatenate((rotated_pixels[:, -1:], rotated_pixels), axis=1)
     # Pre-upscale so viewers (Apple Preview/iOS) don't interpolate pixels into blur
     pil_image = Image.fromarray(display_pixels)
-    pil_image = pil_image.resize((pil_image.width * 20, pil_image.height * 20), Image.NEAREST)
+    pil_image = pil_image.resize(
+        (pil_image.width * 20, pil_image.height * 20), Image.NEAREST
+    )
     image = ImageReader(pil_image)
     image_area_height = page_height - 2 * margin
     image_scale = min(image_area_width / (n_rows + 1), image_area_height / n_columns)
@@ -34,11 +60,9 @@ def create_pattern_pdf(pix_arr, pat_arr, output_path):
     image_x = image_left + (image_area_width - image_width) / 2
     image_y = page_height - margin - image_height
     font_name = "Courier-Bold"
-    number_color = HexColor("#202020")
-    pattern_color = HexColor("#F4CE46")
-    highlight_color = HexColor("#00852B")
-    odd_row_color = HexColor("#EFDEBE")
-    even_row_color = HexColor("#BE232D")
+    output_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), folder_name, "pattern.pdf"
+    )
     pdf = canvas.Canvas(output_path, pagesize=(page_width, page_height))
     pdf.setTitle("Crochet Pattern")
 
@@ -156,10 +180,12 @@ def create_pattern_pdf(pix_arr, pat_arr, output_path):
     pdf.save()
 
 
-if __name__ == "__main__":
+def load_process_pattern(folder_name: str):
     pix_arr = np.array([])
     with open(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "pattern_2.csv"),
+        os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), folder_name, "pattern.csv"
+        ),
         newline="",
     ) as csvfile:
         reader = csv.reader(csvfile)
@@ -180,54 +206,60 @@ if __name__ == "__main__":
         pat_arr = []
         row_ind = 0
 
-        # sanity check
-        for i in range(n_rows - 1):
-            for j in range(n_columns):
-                if stitch_arr[i, j] == "F" and stitch_arr[i + 1, j] == "F":
-                    print(
-                        f"Illegal consecutive 'F' found at ({i},{j}) and ({i + 1},{j})"
-                    )
+    # sanity check
+    for i in range(n_rows - 1):
+        for j in range(n_columns):
+            if stitch_arr[i, j] == "F" and stitch_arr[i + 1, j] == "F":
+                print(f"Illegal consecutive 'F' found at ({i},{j}) and ({i + 1},{j})")
 
-        for row in stitch_arr:
-            # Optimal segmentation via DP: minimize (sum of block lengths, number of tokens)
-            s = "".join(row)
-            n = len(s)
-            INF = (float("inf"), float("inf"))
-            dp = [INF] * (n + 1)
-            choice = [None] * (n + 1)  # (start, block_length, count)
-            dp[0] = (0, 0)
-            for start in range(n):
-                if dp[start] == INF:
-                    continue
-                base_cost, base_tokens = dp[start]
-                for length in range(1, n - start + 1):
-                    block = s[start : start + length]
-                    count = 1
-                    while True:
-                        end = start + count * length
-                        cand = (base_cost + length, base_tokens + 1)
-                        if cand < dp[end]:
-                            dp[end] = cand
-                            choice[end] = (start, length, count)
-                        if s[end : end + length] != block:
-                            break
-                        count += 1
+    for row in stitch_arr:
+        # Optimal segmentation via DP: minimize (sum of block lengths, number of tokens)
+        s = "".join(row)
+        n = len(s)
+        INF = (float("inf"), float("inf"))
+        dp = [INF] * (n + 1)
+        choice = [None] * (n + 1)  # (start, block_length, count)
+        dp[0] = (0, 0)
+        for start in range(n):
+            if dp[start] == INF:
+                continue
+            base_cost, base_tokens = dp[start]
+            for length in range(1, n - start + 1):
+                block = s[start : start + length]
+                count = 1
+                while True:
+                    end = start + count * length
+                    cand = (base_cost + length, base_tokens + 1)
+                    if cand < dp[end]:
+                        dp[end] = cand
+                        choice[end] = (start, length, count)
+                    if s[end : end + length] != block:
+                        break
+                    count += 1
 
-            tokens = []
-            end = n
-            while end > 0:
-                start, length, count = choice[end]
-                tokens.append(f"{count}{s[start : start + length]}/")
-                end = start
-            row_pattern = "".join(reversed(tokens))
+        tokens = []
+        end = n
+        while end > 0:
+            start, length, count = choice[end]
+            tokens.append(f"{count}{s[start : start + length]}/")
+            end = start
+        row_pattern = "".join(reversed(tokens))
 
-            pat_arr.append(f"R{row_ind + 1}/" + row_pattern)
-            row_ind += 1
-        for row in pat_arr:
-            print(row)
+        pat_arr.append(f"R{row_ind + 1}/" + row_pattern)
+        row_ind += 1
+    return pix_arr, pat_arr
 
+
+if __name__ == "__main__":
+    # folder_name = "flower"
+    folder_name = "flower_2"
+    # folder_name = "poinsettia"
+
+    pix_arr, pat_arr = load_process_pattern(folder_name)
     create_pattern_pdf(
         pix_arr,
         pat_arr,
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "pattern.pdf"),
+        folder_name,
+        even_row_color=HexColor("#BE232D"),
+        odd_row_color=HexColor("#EFDEBE"),
     )
