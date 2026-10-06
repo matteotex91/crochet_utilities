@@ -253,7 +253,8 @@ def load_process_pattern(folder_name: str):
 if __name__ == "__main__":
     # folder_name = "flower"
     # folder_name = "flower_2"
-    folder_name = "flower_3"
+    # folder_name = "flower_3"
+    folder_name = "flower_4"
     # folder_name = "poinsettia"
 
     pix_arr, pat_arr = load_process_pattern(folder_name)
