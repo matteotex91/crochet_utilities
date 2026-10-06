@@ -64,6 +64,6 @@ if __name__ == "__main__":
     current_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     # csv_in_path = current_dir + f"/patterns_csv/pat{pic_n}.csv"
     # csv_out_path = current_dir + f"/mosaic_patterns_csv/mos{pic_n}.csv"
-    csv_in_path = current_dir + "/patterns_csv/final.csv"
-    csv_out_path = current_dir + "/definitive_patterns/azulejos.csv"
+    csv_in_path = current_dir + "/patterns_csv/pat20.csv"
+    csv_out_path = current_dir + "/definitive_patterns/pat20.csv"
     translate_mosaic(csv_in_path=csv_in_path, csv_out_path=csv_out_path)
